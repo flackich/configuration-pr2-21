@@ -7,6 +7,11 @@ Supports exact versions, ^, ~, comparators, wildcard parts, OR and tags
 import re
 
 
+VERSION_COMPONENTS = 3  # Major, minor and patch in a complete release version.
+MAJOR_MINOR_COMPONENTS = 2  # Partial version containing major and minor.
+RANGE_BOUND_COUNT = 2  # Lower and upper bounds of a hyphen range.
+
+
 VERSION = re.compile(
     r"^v?(\d+)(?:\.(\d+))?(?:\.(\d+))?"
     r"(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$"
@@ -37,7 +42,7 @@ def version_key(version: str) -> tuple:
 
 def _partial_bound(value: str) -> tuple[tuple[int, int, int], int]:
     parts = value.lstrip("v").split(".")
-    if not 1 <= len(parts) <= 3:
+    if not 1 <= len(parts) <= VERSION_COMPONENTS:
         raise VersionRangeError("Некорректный диапазон: " + value)
     nums = []
     for part in parts:
@@ -46,7 +51,7 @@ def _partial_bound(value: str) -> tuple[tuple[int, int, int], int]:
         if not part.isdecimal():
             raise VersionRangeError("Неизвестный диапазон: " + value)
         nums.append(int(part))
-    return tuple((nums + [0] * 3)[:3]), len(nums)
+    return tuple((nums + [0] * VERSION_COMPONENTS)[:VERSION_COMPONENTS]), len(nums)
 
 
 def _caret_upper(version: tuple[int, int, int], width: int) -> tuple:
@@ -57,7 +62,7 @@ def _caret_upper(version: tuple[int, int, int], width: int) -> tuple:
         return 1, 0, 0
     if minor:
         return 0, minor + 1, 0
-    if width == 2:
+    if width == MAJOR_MINOR_COMPONENTS:
         return 0, 1, 0
     return 0, 0, patch + 1
 
@@ -81,10 +86,18 @@ def _matches_token(version: tuple[int, int, int], token: str) -> bool:
         raise VersionRangeError("Некорректный диапазон: " + token)
     operation, raw = match.groups()
     if "-" in raw or "+" in raw:
-        target = parse_version(raw)[:3]
-        width = 3
+        target = parse_version(raw)[:VERSION_COMPONENTS]
+        width = VERSION_COMPONENTS
     else:
         target, width = _partial_bound(raw)
+    return _compare_target(version, target, width, operation)
+
+
+def _compare_target(
+    version: tuple[int, int, int], target: tuple[int, int, int],
+    width: int, operation: str | None,
+) -> bool:
+    """Apply an explicit comparator or the bounds of a partial version."""
     if operation == ">=":
         return version >= target
     if operation == ">":
@@ -97,7 +110,7 @@ def _matches_token(version: tuple[int, int, int], token: str) -> bool:
         return version == target
     if width == 0:
         return True
-    if width < 3:
+    if width < VERSION_COMPONENTS:
         upper = _tilde_upper(target, width)
         return target <= version < upper
     return version == target
@@ -111,16 +124,16 @@ def satisfies(version: str, expression: str) -> bool:
     if expr.startswith(("file:", "git+", "workspace:", "link:")):
         raise VersionRangeError("Неподдерживаемый протокол версии: " + expr)
     base = parse_version(version)
-    if base[3] and "-" not in expr:
+    if base[VERSION_COMPONENTS] and "-" not in expr:
         return False
     for alternate in expr.split("||"):
         text = alternate.strip()
         if " - " in text:
             bounds = text.split(" - ")
-            if len(bounds) != 2:
+            if len(bounds) != RANGE_BOUND_COUNT:
                 raise VersionRangeError("Некорректный диапазон: " + text)
             text = ">=" + bounds[0] + " <=" + bounds[1]
         tokens = text.replace(",", " ").split()
-        if all(_matches_token(base[:3], token) for token in tokens):
+        if all(_matches_token(base[:VERSION_COMPONENTS], token) for token in tokens):
             return True
     return False

@@ -66,13 +66,21 @@ def _traverse_fixture(
         if name in best_depth and best_depth[name] <= depth:
             continue
         best_depth[name] = depth
-        neighbors = source.get(name, []) if depth < max_depth else []
-        filtered = [
-            item for item in neighbors if not exclude or exclude not in item
-        ]
+        filtered = _fixture_dependencies(source, name, depth, max_depth, exclude)
         graph[name] = filtered
         stack.extend((item, depth + 1) for item in reversed(filtered))
     return root, graph
+
+
+def _fixture_dependencies(
+    source: Graph, name: str, depth: int, max_depth: int, exclude: str
+) -> list[str]:
+    """Select fixture edges within the depth limit, applying the filter."""
+    if depth >= max_depth:
+        return []
+    return [
+        item for item in source.get(name, []) if not exclude or exclude not in item
+    ]
 
 
 def _resolve_alias(name: str, requirement: str) -> tuple[str, str]:
@@ -109,20 +117,28 @@ def build_registry_graph(
         if node in best_depth and best_depth[node] <= depth:
             continue
         best_depth[node] = depth
-        edges: list[str] = []
-        children = []
-        if depth < config.max_depth:
-            for dependency, spec in sorted(requirements.items()):
-                target, constraint = _resolve_alias(dependency, spec)
-                if config.exclude and config.exclude in target:
-                    continue
-                dep_version, _ = client.resolve(target, constraint)
-                destination = target + "@" + dep_version
-                edges.append(destination)
-                children.append((target, constraint, depth + 1))
-        graph[node] = list(dict.fromkeys(edges))
+        edges, children = _registry_dependencies(config, client, requirements, depth)
+        graph[node] = edges
         stack.extend(reversed(children))
     return root, graph
+
+
+def _registry_dependencies(
+    config: Config, client: RegistryClient, requirements: dict[str, str], depth: int
+) -> tuple[list[str], list[tuple[str, str, int]]]:
+    """Resolve child versions after filtering; leave boundary nodes as leaves."""
+    if depth >= config.max_depth:
+        return [], []
+    edges: list[str] = []
+    children = []
+    for dependency, spec in sorted(requirements.items()):
+        target, constraint = _resolve_alias(dependency, spec)
+        if config.exclude and config.exclude in target:
+            continue
+        dep_version, _ = client.resolve(target, constraint)
+        edges.append(target + "@" + dep_version)
+        children.append((target, constraint, depth + 1))
+    return list(dict.fromkeys(edges)), children
 
 
 def find_cycles(graph: Graph) -> list[list[str]]:
