@@ -17,6 +17,8 @@ class Config:
     test_mode: bool
     max_depth: int
     exclude: str
+    only_d2: bool = False
+    output: str | None = None
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -38,6 +40,12 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--exclude", default="", help="подстрока для исключения пакетов"
     )
+    parser.add_argument(
+        "--only-d2", action="store_true", help="вывести только D2-код"
+    )
+    parser.add_argument(
+        "--output", help="сохранить D2-код в указанный .d2 файл"
+    )
     return parser
 
 
@@ -58,10 +66,14 @@ def parse_config(argv: list[str] | None = None) -> Config:
         parsed = urlparse(args.repository)
         if parsed.scheme not in {"http", "https"} or not parsed.netloc:
             parser.error("--repository должен быть URL http(s)")
+    if args.output and not args.output.endswith(".d2"):
+        parser.error("--output должен заканчиваться на .d2")
     return Config(
         package=args.package,
         repository=args.repository,
         test_mode=args.test_mode,
         max_depth=args.max_depth,
         exclude=args.exclude,
+        only_d2=args.only_d2,
+        output=args.output,
     )

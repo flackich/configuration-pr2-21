@@ -20,7 +20,9 @@ def load_test_repository(path: str) -> Graph:
     try:
         content = json.loads(Path(path).read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as error:
-        raise GraphError("Не удалось прочитать тестовый граф: " + str(error)) from error
+        raise GraphError(
+            "Не удалось прочитать тестовый граф: " + str(error)
+        ) from error
     if not isinstance(content, dict):
         raise GraphError("Тестовый граф должен быть JSON-объектом")
     answer = {}
@@ -30,7 +32,10 @@ def load_test_repository(path: str) -> Graph:
         if not isinstance(neighbors, list):
             raise GraphError("Список зависимостей обязателен для " + name)
         for dependency in neighbors:
-            if not isinstance(dependency, str) or not re.fullmatch(r"[A-Z]+", dependency):
+            if (
+                not isinstance(dependency, str)
+                or not re.fullmatch(r"[A-Z]+", dependency)
+            ):
                 raise GraphError("Имя зависимости должно состоять из A-Z")
         answer[name] = list(dict.fromkeys(neighbors))
     return answer
@@ -41,7 +46,9 @@ def build_test_graph(config: Config) -> tuple[str, Graph]:
     source = load_test_repository(config.repository)
     if config.package not in source:
         raise GraphError("Исходный пакет отсутствует в тестовом графе")
-    return _traverse_fixture(source, config.package, config.max_depth, config.exclude)
+    return _traverse_fixture(
+        source, config.package, config.max_depth, config.exclude
+    )
 
 
 def _traverse_fixture(
@@ -60,7 +67,9 @@ def _traverse_fixture(
             continue
         best_depth[name] = depth
         neighbors = source.get(name, []) if depth < max_depth else []
-        filtered = [item for item in neighbors if not exclude or exclude not in item]
+        filtered = [
+            item for item in neighbors if not exclude or exclude not in item
+        ]
         graph[name] = filtered
         stack.extend((item, depth + 1) for item in reversed(filtered))
     return root, graph
@@ -89,7 +98,9 @@ def build_registry_graph(
     stack = [(config.package, "latest", 0)]
     while stack:
         name, requirement, depth = stack.pop()
-        if depth > config.max_depth or (config.exclude and config.exclude in name):
+        if depth > config.max_depth or (
+            config.exclude and config.exclude in name
+        ):
             continue
         version, requirements = client.resolve(name, requirement)
         node = name + "@" + version

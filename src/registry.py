@@ -1,4 +1,4 @@
-"""Read npm registry JSON directly, without invoking npm or dependencies APIs."""
+"""Read npm registry JSON directly, without invoking npm."""
 
 import json
 from urllib.error import HTTPError, URLError
@@ -38,7 +38,10 @@ class RegistryClient:
             content = json.loads(data.decode("utf-8"))
         except (UnicodeError, json.JSONDecodeError) as error:
             raise RegistryError("Некорректный JSON для " + name) from error
-        if not isinstance(content, dict) or not isinstance(content.get("versions"), dict):
+        if (
+            not isinstance(content, dict)
+            or not isinstance(content.get("versions"), dict)
+        ):
             raise RegistryError("Нет списка версий в метаданных: " + name)
         return content
 
@@ -47,7 +50,9 @@ class RegistryClient:
             self.cache[name] = self._read_json(name)
         return self.cache[name]
 
-    def resolve(self, name: str, requirement: str = "latest") -> tuple[str, dict]:
+    def resolve(
+        self, name: str, requirement: str = "latest"
+    ) -> tuple[str, dict]:
         """Return (chosen version, dependencies dict), choosing latest match."""
         metadata = self.metadata(name)
         versions = metadata["versions"]
@@ -61,7 +66,9 @@ class RegistryClient:
             except VersionRangeError as error:
                 raise RegistryError(f"{name}: {error}") from error
         if not candidates:
-            raise RegistryError(f"Не найдена версия {name}, подходящая под {requirement}")
+            raise RegistryError(
+                f"Не найдена версия {name}, подходящая под {requirement}"
+            )
         chosen = max(candidates, key=version_key)
         data = versions[chosen]
         dependencies = data.get("dependencies", {})

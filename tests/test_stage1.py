@@ -32,7 +32,10 @@ class ConfigTests(unittest.TestCase):
         cases = [
             ["--repository", "https://registry.npmjs.org"],
             ["--package", "a", "--repository", "not-an-url"],
-            ["--package", "a", "--repository", "http://host", "--max-depth", "-1"],
+            [
+                "--package", "a", "--repository", "http://host",
+                "--max-depth", "-1",
+            ],
             ["--package", "bad name", "--repository", "http://host"],
             ["--package", "a", "--repository", "missing.json", "--test-mode"],
         ]

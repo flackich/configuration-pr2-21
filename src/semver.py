@@ -29,7 +29,9 @@ def version_key(version: str) -> tuple:
     major, minor, patch, pre = parse_version(version)
     if not pre:
         return major, minor, patch, 1, ()
-    parts = tuple((0, int(p)) if p.isdigit() else (1, p) for p in pre.split("."))
+    parts = tuple(
+        (0, int(p)) if p.isdigit() else (1, p) for p in pre.split(".")
+    )
     return major, minor, patch, 0, parts
 
 
@@ -102,7 +104,7 @@ def _matches_token(version: tuple[int, int, int], token: str) -> bool:
 
 
 def satisfies(version: str, expression: str) -> bool:
-    """Match common npm constraints, rejecting unsupported non-semver protocols."""
+    """Match a subset of common npm semver constraints."""
     expr = expression.strip()
     if expr in {"", "*"}:
         return "-" not in version
