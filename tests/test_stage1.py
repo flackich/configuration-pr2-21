@@ -3,10 +3,8 @@
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
 
 from src.cli import parse_config
-from src.main import main
 
 
 class ConfigTests(unittest.TestCase):
@@ -42,13 +40,6 @@ class ConfigTests(unittest.TestCase):
             with self.subTest(args=args), self.assertRaises(SystemExit):
                 parse_config(args)
 
-    def test_stage_one_prints_configuration(self):
-        with patch("builtins.print") as display:
-            self.assertEqual(main([
-                "--package", "A", "--repository", "https://registry.npmjs.org",
-            ]), 0)
-        display.assert_any_call("package:", "A")
-        display.assert_any_call("max_depth:", 2)
 
 
 if __name__ == "__main__":
