@@ -66,7 +66,9 @@ def _traverse_fixture(
         if name in best_depth and best_depth[name] <= depth:
             continue
         best_depth[name] = depth
-        filtered = _fixture_dependencies(source, name, depth, max_depth, exclude)
+        filtered = _fixture_dependencies(
+            source, name, depth, max_depth, exclude
+        )
         graph[name] = filtered
         stack.extend((item, depth + 1) for item in reversed(filtered))
     return root, graph
@@ -79,7 +81,8 @@ def _fixture_dependencies(
     if depth >= max_depth:
         return []
     return [
-        item for item in source.get(name, []) if not exclude or exclude not in item
+        item for item in source.get(name, [])
+        if not exclude or exclude not in item
     ]
 
 
@@ -117,16 +120,19 @@ def build_registry_graph(
         if node in best_depth and best_depth[node] <= depth:
             continue
         best_depth[node] = depth
-        edges, children = _registry_dependencies(config, client, requirements, depth)
+        edges, children = _registry_dependencies(
+            config, client, requirements, depth
+        )
         graph[node] = edges
         stack.extend(reversed(children))
     return root, graph
 
 
 def _registry_dependencies(
-    config: Config, client: RegistryClient, requirements: dict[str, str], depth: int
+    config: Config, client: RegistryClient,
+    requirements: dict[str, str], depth: int,
 ) -> tuple[list[str], list[tuple[str, str, int]]]:
-    """Resolve child versions after filtering; leave boundary nodes as leaves."""
+    """Resolve filtered children, leaving depth-boundary nodes as leaves."""
     if depth >= config.max_depth:
         return [], []
     edges: list[str] = []

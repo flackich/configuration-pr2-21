@@ -65,8 +65,12 @@ class GraphRegressionTests(unittest.TestCase):
         )
         config = Config("root", "https://example.org", False, 1, "skip")
         _, graph = build_registry_graph(config, client)
-        self.assertEqual(graph, {"root@1.0.0": ["keep@1.0.0"], "keep@1.0.0": []})
-        self.assertNotIn("skip", [call.args[0] for call in client.resolve.call_args_list])
+        self.assertEqual(
+            graph, {"root@1.0.0": ["keep@1.0.0"], "keep@1.0.0": []}
+        )
+        self.assertNotIn(
+            "skip", [call.args[0] for call in client.resolve.call_args_list]
+        )
         client.reset_mock()
         config = Config("root", "https://example.org", False, 0, "")
         _, graph = build_registry_graph(config, client)

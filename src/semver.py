@@ -2,14 +2,18 @@
 
 Supports exact versions, ^, ~, comparators, wildcard parts, OR and tags
 (the latter are resolved in RegistryClient). Exotic npm protocols are rejected.
+
+VERSION_COMPONENTS counts major, minor and patch in a full release version.
+MAJOR_MINOR_COMPONENTS counts the parts of a major/minor partial version.
+RANGE_BOUND_COUNT counts the lower and upper bounds of a hyphen range.
 """
 
 import re
 
 
-VERSION_COMPONENTS = 3  # Major, minor and patch in a complete release version.
-MAJOR_MINOR_COMPONENTS = 2  # Partial version containing major and minor.
-RANGE_BOUND_COUNT = 2  # Lower and upper bounds of a hyphen range.
+VERSION_COMPONENTS = 3
+MAJOR_MINOR_COMPONENTS = 2
+RANGE_BOUND_COUNT = 2
 
 
 VERSION = re.compile(
@@ -51,7 +55,10 @@ def _partial_bound(value: str) -> tuple[tuple[int, int, int], int]:
         if not part.isdecimal():
             raise VersionRangeError("Неизвестный диапазон: " + value)
         nums.append(int(part))
-    return tuple((nums + [0] * VERSION_COMPONENTS)[:VERSION_COMPONENTS]), len(nums)
+    return (
+        tuple((nums + [0] * VERSION_COMPONENTS)[:VERSION_COMPONENTS]),
+        len(nums),
+    )
 
 
 def _caret_upper(version: tuple[int, int, int], width: int) -> tuple:
@@ -134,6 +141,9 @@ def satisfies(version: str, expression: str) -> bool:
                 raise VersionRangeError("Некорректный диапазон: " + text)
             text = ">=" + bounds[0] + " <=" + bounds[1]
         tokens = text.replace(",", " ").split()
-        if all(_matches_token(base[:VERSION_COMPONENTS], token) for token in tokens):
+        if all(
+            _matches_token(base[:VERSION_COMPONENTS], token)
+            for token in tokens
+        ):
             return True
     return False
