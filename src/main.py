@@ -1,26 +1,35 @@
-"""Stage 2: display direct npm dependencies returned by the registry."""
+"""Stage 3: build transitive dependency graphs using iterative DFS."""
 
 import sys
 
 from src.cli import parse_config
+from src.graph import GraphError, build_registry_graph, build_test_graph, find_cycles
 from src.registry import RegistryClient, RegistryError
 
 
 def main(argv: list[str] | None = None) -> int:
     config = parse_config(argv)
-    if config.test_mode:
-        print("Тестовый режим будет добавлен на этапе 3", file=sys.stderr)
-        return 2
     try:
-        version, dependencies = RegistryClient(config.repository).resolve(config.package)
-    except RegistryError as error:
+        if config.test_mode:
+            root, graph = build_test_graph(config)
+        else:
+            root, graph = build_registry_graph(
+                config, RegistryClient(config.repository)
+            )
+    except (RegistryError, GraphError) as error:
         print("Ошибка:", error, file=sys.stderr)
         return 1
-    print(f"Прямые зависимости {config.package}@{version}:")
-    for name, requirement in sorted(dependencies.items()):
-        print(f"  {name}: {requirement}")
-    if not dependencies:
-        print("  (нет прямых зависимостей)")
+    print("Граф зависимостей для", root)
+    for name, dependencies in graph.items():
+        for dependency in dependencies:
+            print("  " + name + " -> " + dependency)
+    cycles = find_cycles(graph)
+    if cycles:
+        print("Найдены циклы:")
+        for cycle in cycles:
+            print("  " + " -> ".join(cycle))
+    else:
+        print("Циклы не обнаружены")
     return 0
 
 
